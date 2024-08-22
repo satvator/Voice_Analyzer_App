@@ -3,7 +3,7 @@ import HomePage from './components/HistoryPage.vue';
 import VoiceTranscription from './components/VoiceTranscription.vue';
 import WordFrequencies from './components/WordFrequencies.vue';
 import PhraseFrequencies from './components/PhraseFrequencies.vue';
-import AddCourse from './components/AddCourse.vue';
+// import AddCourse from './components/AddCourse.vue';
 
 const routes = [
   {
@@ -11,7 +11,7 @@ const routes = [
     name: 'HomePage',
     component: HomePage,
   },
-  { path: '/addcourse', component: AddCourse, name: 'AddCourse' },
+  // { path: '/addcourse', component: AddCourse, name: 'AddCourse' },
   {
     path: '/transcribe',
     name: 'VoiceTranscription',
