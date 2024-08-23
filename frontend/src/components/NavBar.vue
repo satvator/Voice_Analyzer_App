@@ -1,64 +1,56 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <div class="container">
-      <a class="navbar-brand" href="#">{{ userName }}'s Dashboard</a>
-      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-        <ul class="navbar-nav">
-          <div class="flex-container" v-if="role == 'admin'">
-            <li class="nav-item">
-              <a class="nav-link" href="#" @click="approvalRequests">Approval Requests &vert;</a>
-            </li>
-          </div>
-          
-          <div class="flex-container" v-if="role=='user'">
-            <li>
-              <a class="nav-link" href="#" @click="userProfile"
-                >Profile &vert;</a
-              >
-            </li>
-          </div>
-          <li class="nav-item">
-            <a class="nav-link" href="#" @click="returnDashboard">Dashboard &vert;</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#" @click="logout">Logout</a>
-          </li>
-        </ul>
-      </div>
-    </div>
+  <nav>
+    <ul>
+      <li><router-link to="/">Home</router-link></li>
+      <li><router-link to="/transcribe">Transcribe</router-link></li>
+      <li><router-link to="/frequency">Word Frequencies</router-link></li>
+      <li><router-link to="/phrase">Phrase Frequencies</router-link></li>
+      <li><router-link to="/history">History</router-link></li>
+      <li><router-link to="/comparison">Comparison</router-link></li>
+    </ul>
   </nav>
 </template>
 
 <script>
 export default {
-  name: "NavBar",
-  props: {
-    role: String,
-    userName: String,
-  },
-  methods: {
-    approvalRequests() {
-      const data = encodeURIComponent(
-        JSON.stringify({ role: this.role, userName: this.userName })
-      );
-      this.$router.push({
-        path: "/admin/approvalRequests",
-        query: { data: data },
-      });
-    },
-    userProfile() {
-      const data = encodeURIComponent(
-        JSON.stringify({ role: this.role, userName: this.userName })
-      );
-      this.$router.push({ path: "/user/profile", query: { data: data } });
-    },
-    returnDashboard() {
-      this.$router.push("/studentdb");
-    },
-    logout(){
-        sessionStorage.removeItem('accessToken');
-        this.$router.push("/");
-    }
-  },
-};
+  name: 'NavBar'
+}
 </script>
+
+<style scoped>
+nav {
+  background-color: #2c3e50;
+  padding: 15px;
+}
+
+ul {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  display: inline;
+}
+
+a {
+  color: #ecf0f1;
+  text-decoration: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a:hover {
+  background-color: #3498db;
+  color: #fff;
+}
+
+a.router-link-active {
+  background-color: #2980b9;
+  color: #fff;
+}
+</style>

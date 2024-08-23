@@ -1,52 +1,33 @@
 <template>
   <div id="app">
-  <NavBar />
-  <router-view></router-view>
-
+    <nav>
+      <router-link to="/">Home</router-link>
+      <router-link to="/history">History</router-link>
+      <router-link to="/frequency">Word Frequencies</router-link>
+      <router-link to="/phrase">Phrase Frequencies</router-link>
+      <router-link to="/comparison">Comparison</router-link>
+    </nav>
+    <router-view/>
   </div>
 </template>
 
 <script>
-import NavBar from './components/NavBar.vue'
-// import VoiceTranscription from './components/VoiceTranscription.vue';
-// import WordFrequencies from './components/WordFrequencies.vue';
-// import PhraseFrequencies from './components/PhraseFrequencies.vue';
-
-// export default {
-//   name: 'App',
-//   components: {
-//     VoiceTranscription,
-//     WordFrequencies,
-//     PhraseFrequencies
-//   },
-//   data() {
-//     return {
-//       userId: ''
-//     };
-//   },
-//   methods: {
-//     fetchData(userId) {
-//       this.userId = userId;
-//     }
-//   }
-// };
-
 export default {
   name: 'App',
-  components: {
-    NavBar
-  }
-}
-
+};
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+nav {
+  padding: 10px;
+  background-color: #34495e;
+}
+nav a {
+  margin: 10px;
+  color: white;
+  text-decoration: none;
+}
+nav a.router-link-exact-active {
+  font-weight: bold;
 }
 </style>
-
-

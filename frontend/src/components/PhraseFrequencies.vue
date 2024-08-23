@@ -1,37 +1,51 @@
 <template>
-  <div class="phrase-frequencies">
-    <h2>Top Phrases</h2>
-    <table v-if="phrases.length">
-      <thead>
-        <tr>
-          <th>Phrase</th>
-          <th>Frequency</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in phrases" :key="item.phrase">
-          <td>{{ item.phrase }}</td>
-          <td>{{ item.frequency }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <p v-else>No phrase frequencies available.</p>
+  <div class="phrases-container">
+    <h2>View Your Top 3 Phrases</h2>
+    <form @submit.prevent="fetchPhrases">
+      <label for="userId">Enter Your Name:</label>
+      <input type="text" v-model="userId" required />
+      <button type="submit">View Phrases</button>
+    </form>
+
+    <div v-if="phrases.length">
+      <h3>Top 3 Phrases:</h3>
+      <ul>
+        <li v-for="(phrase, index) in phrases" :key="index">
+          "{{ phrase.phrase }}" - {{ phrase.frequency }} times
+        </li>
+      </ul>
+    </div>
+    <div v-else-if="phrasesFetched">
+      <p>No phrase data found for this user.</p>
+    </div>
   </div>
 </template>
 
 <script>
 export default {
-  props: ['userId'],
+  name: 'PhraseFrequencies',
   data() {
     return {
-      phrases: []
+      userId: '',
+      phrases: [],
+      phrasesFetched: false
     };
   },
-  async created() {
-    if (this.userId) {
-      const response = await fetch(`http://localhost:5000/phrase-frequencies/${this.userId}`);
-      const result = await response.json();
-      this.phrases = result;
+  methods: {
+    async fetchPhrases() {
+      this.phrasesFetched = false;
+      try {
+        const response = await fetch(`http://localhost:5000/phrase-frequencies/${this.userId}`);
+        if (response.ok) {
+          this.phrases = await response.json();
+        } else {
+          this.phrases = [];
+        }
+        this.phrasesFetched = true;
+      } catch (error) {
+        console.error('Error fetching phrases:', error);
+        this.phrases = [];
+      }
     }
   }
 };

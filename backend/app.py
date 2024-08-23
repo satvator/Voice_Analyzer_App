@@ -6,6 +6,8 @@ from googletrans import Translator
 from collections import Counter
 import re
 import speech_recognition as sr
+from pydub import AudioSegment
+import io
 
 app = Flask(__name__)
 CORS(app)
@@ -59,8 +61,19 @@ def transcribe():
     # Convert audio to text
     recognizer = sr.Recognizer()
     try:
-        with sr.AudioFile(audio_file) as source:
-            audio = recognizer.record(source)
+        # Handle MP3 file if needed
+        if audio_file.filename.endswith('.mp3'):
+            audio = AudioSegment.from_mp3(audio_file)
+            audio = audio.set_channels(1).set_frame_rate(16000)  # Ensure mono and 16kHz for recognizer
+            with io.BytesIO() as buffer:
+                audio.export(buffer, format="wav")
+                buffer.seek(0)
+                with sr.AudioFile(buffer) as source:
+                    audio = recognizer.record(source)
+        else:
+            with sr.AudioFile(audio_file) as source:
+                audio = recognizer.record(source)
+        
         original_text = recognizer.recognize_google(audio)
     except sr.UnknownValueError:
         return jsonify({'status': 'error', 'message': 'Could not understand audio.'}), 400

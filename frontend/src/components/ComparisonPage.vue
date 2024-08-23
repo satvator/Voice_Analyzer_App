@@ -1,29 +1,31 @@
 <template>
-  <div class="frequencies-container">
-    <h1>Word Frequencies</h1>
-    <form @submit.prevent="fetchWordFrequencies">
+  <div class="comparison-container">
+    <h1>Word Frequency Comparison</h1>
+    <form @submit.prevent="fetchComparisonData">
       <label for="userId">User ID:</label>
       <input type="text" v-model="userId" placeholder="Enter your user ID" required />
-      <button type="submit" :disabled="isLoading">Get Frequencies</button>
+      <button type="submit" :disabled="isLoading">Compare</button>
     </form>
 
     <div v-if="isLoading" class="loading-indicator">
       <p>Loading... Please wait.</p>
     </div>
 
-    <div v-if="wordFrequencies.length" class="result">
-      <h2>Word Frequencies:</h2>
+    <div v-if="comparisonData" class="result">
+      <h2>Comparison Data:</h2>
       <table>
         <thead>
           <tr>
             <th>Word</th>
-            <th>Frequency</th>
+            <th>Your Frequency</th>
+            <th>All Users Frequency</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="entry in wordFrequencies" :key="entry.word">
-            <td>{{ entry.word }}</td>
-            <td>{{ entry.frequency }}</td>
+          <tr v-for="(data, word) in comparisonData" :key="word">
+            <td>{{ word }}</td>
+            <td>{{ data.user_frequency }}</td>
+            <td>{{ data.all_users_frequency }}</td>
           </tr>
         </tbody>
       </table>
@@ -37,17 +39,17 @@
 
 <script>
 export default {
-  name: 'WordFrequencies',
+  name: 'ComparisonPage',
   data() {
     return {
       userId: '',
-      wordFrequencies: [],
+      comparisonData: null,
       errorMessage: '',
       isLoading: false
     };
   },
   methods: {
-    async fetchWordFrequencies() {
+    async fetchComparisonData() {
       if (!this.userId) {
         this.errorMessage = 'User ID is required.';
         return;
@@ -56,17 +58,17 @@ export default {
       this.isLoading = true;
 
       try {
-        const response = await fetch(`http://localhost:5000/frequencies/${this.userId}`);
+        const response = await fetch(`http://localhost:5000/comparison/${this.userId}`);
         const data = await response.json();
         if (response.ok) {
-          this.wordFrequencies = data;
+          this.comparisonData = data;
           this.errorMessage = '';
         } else {
-          this.wordFrequencies = [];
+          this.comparisonData = null;
           this.errorMessage = data.error || 'An error occurred.';
         }
       } catch (error) {
-        this.wordFrequencies = [];
+        this.comparisonData = null;
         this.errorMessage = `Error: ${error.message}`;
       } finally {
         this.isLoading = false;
@@ -77,8 +79,8 @@ export default {
 </script>
 
 <style scoped>
-.frequencies-container {
-  max-width: 600px;
+.comparison-container {
+  max-width: 800px;
   margin: auto;
   padding: 20px;
   border: 1px solid #ccc;
