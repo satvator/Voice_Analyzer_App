@@ -5,6 +5,7 @@ import WordFrequencies from './components/WordFrequencies.vue';
 import PhraseFrequencies from './components/PhraseFrequencies.vue';
 import HomePage from './components/HomePage.vue';
 import ComparisonPage from './components/ComparisonPage.vue';
+import LiveAudio from './components/LiveAudio.vue';
 
 const routes = [
   {
@@ -37,6 +38,11 @@ const routes = [
     name: 'ComparisonPage',
     component: ComparisonPage,
   },
+  {
+    path: '/transcribe_live',
+    name: 'LiveAudio',
+    component: LiveAudio,
+  }
 ];
 
 const router = createRouter({

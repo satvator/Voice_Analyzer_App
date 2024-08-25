@@ -6,6 +6,7 @@
       <router-link to="/frequency">Word Frequencies</router-link>
       <router-link to="/phrase">Phrase Frequencies</router-link>
       <router-link to="/comparison">Comparison</router-link>
+      <router-link to="/transcribe_live">Real Time Transcription</router-link>
     </nav>
     <router-view/>
   </div>

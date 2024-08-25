@@ -12,15 +12,13 @@ import io
 app = Flask(__name__)
 CORS(app)
 
-# Database setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///voice_analyzer.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Initialize Translator
+recognizer = sr.Recognizer()
 translator = Translator()
 
-# Define the database models
 class Transcription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(50))
@@ -41,7 +39,7 @@ class Phrase(db.Model):
     phrase = db.Column(db.String(255))
     frequency = db.Column(db.Integer)
 
-# Create the database tables within the application context
+# Creating the database tables within the application context
 with app.app_context():
     db.create_all()
 
@@ -58,13 +56,12 @@ def transcribe():
     if not audio_file:
         return jsonify({'status': 'error', 'message': 'No audio file provided.'}), 400
 
-    # Convert audio to text
+    # Converting audio to text
     recognizer = sr.Recognizer()
     try:
-        # Handle MP3 file if needed
         if audio_file.filename.endswith('.mp3'):
             audio = AudioSegment.from_mp3(audio_file)
-            audio = audio.set_channels(1).set_frame_rate(16000)  # Ensure mono and 16kHz for recognizer
+            audio = audio.set_channels(1).set_frame_rate(16000)  
             with io.BytesIO() as buffer:
                 audio.export(buffer, format="wav")
                 buffer.seek(0)
@@ -80,32 +77,29 @@ def transcribe():
     except sr.RequestError:
         return jsonify({'status': 'error', 'message': 'Could not request results from Google Speech Recognition service.'}), 500
 
-    # Detect language
+    # Detecting language
     language = detect(original_text)
     
-    # Translate to English if needed
     if language != 'en':
         translated_text = translator.translate(original_text, src=language, dest='en').text
     else:
         translated_text = original_text
     
-    # Save transcription
     transcription = Transcription(user_id=user_id, original_text=original_text, translated_text=translated_text, language=language)
     db.session.add(transcription)
     db.session.commit()
     
-    # Update word frequencies and phrases
     update_word_frequencies(user_id, translated_text)
     update_phrases(user_id, translated_text)
     
     return jsonify({'status': 'success', 'translated_text': translated_text})
 
 def update_word_frequencies(user_id, text):
-    # Remove punctuation and lowercase
+    # Removing punctuation and lowercase
     words = re.findall(r'\b\w+\b', text.lower())
     word_counts = Counter(words)
     
-    # Update or insert word frequencies
+    # Updating/inserting word frequencies
     for word, count in word_counts.items():
         existing = WordFrequency.query.filter_by(user_id=user_id, word=word).first()
         if existing:
@@ -127,6 +121,62 @@ def update_phrases(user_id, text):
             new_entry = Phrase(user_id=user_id, phrase=phrase, frequency=count)
             db.session.add(new_entry)
     db.session.commit()
+
+@app.route('/transcribe_live', methods=['POST'])
+def transcribe_live():
+    if 'audio' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No audio file provided'}), 400
+
+    audio_file = request.files['audio']
+    user_id = request.form.get('user_id')  # Ensure user_id is provided in the form data
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'No user_id provided'}), 400
+
+    try:
+        # Converting file to WAV if it's not in WAV format
+        if audio_file.mimetype != 'audio/wav':
+            audio = AudioSegment.from_file(audio_file)
+            wav_io = io.BytesIO()
+            audio.export(wav_io, format='wav')
+            wav_io.seek(0)
+            audio_file = wav_io
+
+        recognizer = sr.Recognizer()
+        audio_data = sr.AudioFile(audio_file)
+        with audio_data as source:
+            audio = recognizer.record(source)
+        
+        # Trying to recognize speech
+        original_text = recognizer.recognize_google(audio)
+        
+        # Checking if transcription is empty
+        if not original_text.strip():
+            return jsonify({'status': 'error', 'message': 'No speech detected in the audio file'}), 400
+        
+        # Detecting language
+        language = detect(original_text)
+        
+        if language != 'en':
+            translated_text = translator.translate(original_text, src=language, dest='en').text
+        else:
+            translated_text = original_text
+        
+        # Save transcription data to the database
+        transcription = Transcription(user_id=user_id, original_text=original_text, translated_text=translated_text, language=language)
+        db.session.add(transcription)
+        db.session.commit()
+        
+        update_word_frequencies(user_id, translated_text)
+        update_phrases(user_id, translated_text)
+        
+        return jsonify({'status': 'success', 'transcription': original_text, 'translated_text': translated_text})
+
+    except sr.UnknownValueError:
+        return jsonify({'status': 'error', 'message': 'Could not understand audio. The audio may be too unclear.'}), 400
+    except sr.RequestError as e:
+        return jsonify({'status': 'error', 'message': f'Could not request results from Google Speech Recognition service; {e}'}), 500
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error processing audio file: {e}'}), 500
 
 @app.route('/history/<user_id>', methods=['GET'])
 def get_history(user_id):

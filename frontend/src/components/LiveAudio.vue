@@ -1,0 +1,155 @@
+<template>
+  <div class="container">
+    <h1>Live Audio Transcription</h1>
+    <div>
+      <label for="user-id">User ID:</label>
+      <input type="text" v-model="userId" id="user-id" placeholder="Enter your user ID" required />
+    </div>
+    <div>
+      <button @click="startRecording" :disabled="isRecording">Start Recording</button>
+      <button @click="stopRecording" :disabled="!isRecording">Stop Recording</button>
+    </div>
+    <audio :src="audioURL" controls v-if="audioURL"></audio>
+    <br>
+    <button @click="uploadAudio" :disabled="!audioData || !userId">Transcribe Audio</button>
+
+    <!-- Loading Indicator -->
+    <div v-if="isLoading" class="loading">Transcribing... Please wait.</div>
+
+    <div v-if="transcription">
+      <h2>Transcription:</h2>
+      <p>{{ transcription }}</p>
+    </div>
+
+    <div v-if="errorMessage">
+      <h2>Error:</h2>
+      <p>{{ errorMessage }}</p>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      isRecording: false,
+      audioData: null,
+      audioURL: null,
+      transcription: null,
+      errorMessage: null,
+      userId: '',
+      isLoading: false, // Added loading state
+      mediaRecorder: null
+    };
+  },
+  methods: {
+    startRecording() {
+      this.isRecording = true;
+      this.audioData = null;
+      this.transcription = null;
+      this.errorMessage = null;
+
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          const mimeType = 'audio/webm';
+
+          if (MediaRecorder.isTypeSupported(mimeType)) {
+            this.mediaRecorder = new MediaRecorder(stream, { mimeType });
+          } else {
+            console.error(`MIME type ${mimeType} not supported.`);
+            return;
+          }
+
+          this.mediaRecorder.start();
+
+          const audioChunks = [];
+          this.mediaRecorder.addEventListener("dataavailable", event => {
+            audioChunks.push(event.data);
+          });
+
+          this.mediaRecorder.addEventListener("stop", () => {
+            const audioBlob = new Blob(audioChunks, { type: mimeType });
+            this.audioData = audioBlob;
+            this.audioURL = URL.createObjectURL(audioBlob);
+          });
+        })
+        .catch(error => {
+          console.error('Error accessing audio device:', error);
+          this.errorMessage = 'Error accessing audio device.';
+        });
+    },
+    stopRecording() {
+      if (this.mediaRecorder && this.isRecording) {
+        this.isRecording = false;
+        this.mediaRecorder.stop();
+        this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        this.mediaRecorder = null;
+      }
+    },
+    uploadAudio() {
+      if (!this.userId) {
+        this.errorMessage = 'Please enter your user ID.';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('user_id', this.userId);
+      formData.append('audio', this.audioData, 'audio.wav');
+
+      this.isLoading = true; // Show loading indicator
+
+      fetch('http://localhost:5000/transcribe_live', {
+        method: 'POST',
+        body: formData,
+      })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(data => {
+              throw new Error(data.message);
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          this.isLoading = false; // Hide loading indicator
+          if (data.status === 'success') {
+            this.transcription = data.transcription;
+            this.errorMessage = null;
+          } else {
+            this.errorMessage = data.message;
+            this.transcription = null;
+          }
+        })
+        .catch(error => {
+          this.isLoading = false; // Hide loading indicator
+          console.error('Error:', error);
+          this.errorMessage = `Error occurred: ${error.message}`;
+        });
+    }
+  }
+};
+</script>
+
+<style scoped>
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  text-align: center;
+}
+button {
+  margin: 10px;
+}
+audio {
+  margin-top: 10px;
+}
+input[type="text"] {
+  margin: 10px;
+  padding: 5px;
+}
+.loading {
+  margin: 10px;
+  color: #007bff;
+  font-weight: bold;
+}
+</style>
