@@ -25,6 +25,16 @@
       <h2>Error:</h2>
       <p>{{ errorMessage }}</p>
     </div>
+
+    <!-- Similar Users Section -->
+    <div v-if="similarUsers.length > 0">
+      <h2>Similar Users:</h2>
+      <ul>
+        <li v-for="user in similarUsers" :key="user.user_id">
+          User ID: {{ user.user_id }} - Similarity Score: {{ user.score.toFixed(2) }}
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -38,8 +48,9 @@ export default {
       transcription: null,
       errorMessage: null,
       userId: '',
-      isLoading: false, // Added loading state
-      mediaRecorder: null
+      isLoading: false,
+      mediaRecorder: null,
+      similarUsers: []  // New data property for similar users
     };
   },
   methods: {
@@ -48,6 +59,7 @@ export default {
       this.audioData = null;
       this.transcription = null;
       this.errorMessage = null;
+      this.similarUsers = [];  // Reset similar users list
 
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
@@ -115,6 +127,9 @@ export default {
           if (data.status === 'success') {
             this.transcription = data.transcription;
             this.errorMessage = null;
+
+            // Fetch similar users
+            this.fetchSimilarUsers();
           } else {
             this.errorMessage = data.message;
             this.transcription = null;
@@ -124,6 +139,24 @@ export default {
           this.isLoading = false; // Hide loading indicator
           console.error('Error:', error);
           this.errorMessage = `Error occurred: ${error.message}`;
+        });
+    },
+    fetchSimilarUsers() {
+      fetch(`http://localhost:5000/compare_similarity/${this.userId}`)
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(data => {
+              throw new Error(data.message);
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          this.similarUsers = data; // Update similar users list
+        })
+        .catch(error => {
+          console.error('Error fetching similar users:', error);
+          this.errorMessage = `Error occurred while fetching similar users: ${error.message}`;
         });
     }
   }
@@ -151,5 +184,12 @@ input[type="text"] {
   margin: 10px;
   color: #007bff;
   font-weight: bold;
+}
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+li {
+  margin: 5px 0;
 }
 </style>

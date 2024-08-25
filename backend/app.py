@@ -8,6 +8,7 @@ import re
 import speech_recognition as sr
 from pydub import AudioSegment
 import io
+import spacy
 
 app = Flask(__name__)
 CORS(app)
@@ -18,6 +19,10 @@ db = SQLAlchemy(app)
 
 recognizer = sr.Recognizer()
 translator = Translator()
+
+# Load spaCy models
+nlp = spacy.load("en_core_web_sm")
+nlp_md = spacy.load("en_core_web_md")
 
 class Transcription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -57,42 +62,60 @@ def transcribe():
         return jsonify({'status': 'error', 'message': 'No audio file provided.'}), 400
 
     # Converting audio to text
-    recognizer = sr.Recognizer()
     try:
+        # Convert audio to WAV format if necessary
         if audio_file.filename.endswith('.mp3'):
             audio = AudioSegment.from_mp3(audio_file)
-            audio = audio.set_channels(1).set_frame_rate(16000)  
+            audio = audio.set_channels(1).set_frame_rate(16000)
             with io.BytesIO() as buffer:
                 audio.export(buffer, format="wav")
                 buffer.seek(0)
-                with sr.AudioFile(buffer) as source:
-                    audio = recognizer.record(source)
-        else:
-            with sr.AudioFile(audio_file) as source:
-                audio = recognizer.record(source)
+                audio_file = io.BytesIO(buffer.read())
+        elif audio_file.mimetype != 'audio/wav':
+            audio = AudioSegment.from_file(audio_file)
+            wav_io = io.BytesIO()
+            audio.export(wav_io, format='wav')
+            wav_io.seek(0)
+            audio_file = wav_io
+
+        # Perform speech recognition
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(audio_file) as source:
+            audio = recognizer.record(source)
         
         original_text = recognizer.recognize_google(audio)
     except sr.UnknownValueError:
         return jsonify({'status': 'error', 'message': 'Could not understand audio.'}), 400
     except sr.RequestError:
         return jsonify({'status': 'error', 'message': 'Could not request results from Google Speech Recognition service.'}), 500
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error processing audio file: {e}'}), 500
 
     # Detecting language
-    language = detect(original_text)
+    try:
+        # language = detect(original_text)
+        detection=translator.detect(original_text)
+        language=detection.lang
+        if language != 'en':
+            translated_text = translator.translate(original_text, src=language, dest='en').text
+        else:
+            translated_text = original_text
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error translating text: {e}'}), 500
     
-    if language != 'en':
-        translated_text = translator.translate(original_text, src=language, dest='en').text
-    else:
-        translated_text = original_text
-    
-    transcription = Transcription(user_id=user_id, original_text=original_text, translated_text=translated_text, language=language)
-    db.session.add(transcription)
-    db.session.commit()
-    
-    update_word_frequencies(user_id, translated_text)
-    update_phrases(user_id, translated_text)
-    
+    # Save transcription data to the database
+    try:
+        transcription = Transcription(user_id=user_id, original_text=original_text, translated_text=translated_text, language=language)
+        db.session.add(transcription)
+        db.session.commit()
+        
+        update_word_frequencies(user_id, translated_text)
+        update_phrases(user_id, translated_text)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error saving transcription data: {e}'}), 500
+
     return jsonify({'status': 'success', 'translated_text': translated_text})
+
 
 def update_word_frequencies(user_id, text):
     # Removing punctuation and lowercase
@@ -110,7 +133,14 @@ def update_word_frequencies(user_id, text):
     db.session.commit()
 
 def update_phrases(user_id, text):
-    phrases = re.findall(r'\b\w+\b(?:\s+\b\w+\b){0,2}', text.lower())  # Top 3-word phrases
+    doc = nlp(text)
+    phrases = []
+    
+    for np in doc.noun_chunks:
+        phrase = np.text.lower().strip()
+        if len(phrase.split()) <= 6:  # Limiting to 3-word phrases
+            phrases.append(phrase)
+    
     phrase_counts = Counter(phrases)
     
     for phrase, count in phrase_counts.items():
@@ -154,22 +184,23 @@ def transcribe_live():
             return jsonify({'status': 'error', 'message': 'No speech detected in the audio file'}), 400
         
         # Detecting language
-        language = detect(original_text)
+        detection = translator.detect(original_text)
+        detected_language = detection.lang
         
-        if language != 'en':
-            translated_text = translator.translate(original_text, src=language, dest='en').text
+        if detected_language != 'en':
+            translated_text = translator.translate(original_text, src=detected_language, dest='en').text
         else:
             translated_text = original_text
         
         # Save transcription data to the database
-        transcription = Transcription(user_id=user_id, original_text=original_text, translated_text=translated_text, language=language)
+        transcription = Transcription(user_id=user_id, original_text=original_text, translated_text=translated_text, language=detected_language)
         db.session.add(transcription)
         db.session.commit()
         
         update_word_frequencies(user_id, translated_text)
         update_phrases(user_id, translated_text)
         
-        return jsonify({'status': 'success', 'transcription': original_text, 'translated_text': translated_text})
+        return jsonify({'status': 'success', 'transcription': translated_text, 'translated_text': translated_text})
 
     except sr.UnknownValueError:
         return jsonify({'status': 'error', 'message': 'Could not understand audio. The audio may be too unclear.'}), 400
@@ -177,7 +208,8 @@ def transcribe_live():
         return jsonify({'status': 'error', 'message': f'Could not request results from Google Speech Recognition service; {e}'}), 500
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error processing audio file: {e}'}), 500
-
+    
+    
 @app.route('/history/<user_id>', methods=['GET'])
 def get_history(user_id):
     transcriptions = Transcription.query.filter_by(user_id=user_id).all()
@@ -230,6 +262,34 @@ def compare_word_frequencies(user_id):
         }
     
     return jsonify(comparison)
+
+def compute_similarity(text1, text2):
+    doc1 = nlp_md(text1)
+    doc2 = nlp_md(text2)
+    return doc1.similarity(doc2)
+
+@app.route('/compare_similarity/<user_id>', methods=['GET'])
+def compare_similarity(user_id):
+    current_user_transcriptions = Transcription.query.filter_by(user_id=user_id).all()
+    all_users_transcriptions = Transcription.query.filter(Transcription.user_id != user_id).all()
+    
+    if not current_user_transcriptions:
+        return jsonify({'error': 'No data found for this user.'}), 404
+
+    similarity_scores = {}
+    for other_transcription in all_users_transcriptions:
+        for current_transcription in current_user_transcriptions:
+            score = compute_similarity(current_transcription.translated_text, other_transcription.translated_text)
+            if other_transcription.user_id not in similarity_scores:
+                similarity_scores[other_transcription.user_id] = score
+            else:
+                similarity_scores[other_transcription.user_id] = max(similarity_scores[other_transcription.user_id], score)
+
+    # Sort by similarity score and keep the top N most similar users (e.g., top 5)
+    top_n = 5
+    sorted_scores = sorted(similarity_scores.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    
+    return jsonify([{'user_id': user_id, 'score': score} for user_id, score in sorted_scores])
 
 if __name__ == '__main__':
     app.run(debug=True)
