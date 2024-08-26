@@ -7,6 +7,7 @@ from collections import Counter
 import re
 import speech_recognition as sr
 from pydub import AudioSegment
+import os
 import io
 import spacy
 import pytz
@@ -15,7 +16,8 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///voice_analyzer.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///voice_analyzer.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///voice_analyzer.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -296,5 +298,9 @@ def compare_similarity(user_id):
     
     return jsonify([{'user_id': user_id, 'score': score} for user_id, score in sorted_scores])
 
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({'status': 'error', 'message': 'Internal server error.'}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
