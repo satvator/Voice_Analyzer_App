@@ -213,8 +213,8 @@ def get_history(user_id):
     ist = pytz.timezone('Asia/Kolkata')  # Define IST timezone
     result = []
     for t in transcriptions:
-        # Convert timestamp to IST
-        timestamp_ist = t.timestamp.astimezone(ist).strftime('%Y-%m-%d %H:%M:%S')
+        # Convert timestamp to IST and format to only include date
+        timestamp_ist = t.timestamp.astimezone(ist).strftime('%Y-%m-%d')
         result.append({
             'id': t.id,
             'original_text': t.original_text,
