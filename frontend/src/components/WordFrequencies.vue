@@ -1,9 +1,9 @@
 <template>
   <div class="frequencies-container">
     <h1>Word Frequencies</h1>
-    <form @submit.prevent="fetchWordFrequencies">
-      <label for="userId">User ID:</label>
-      <input type="text" v-model="userId" placeholder="Enter your user ID" required />
+    <form @submit.prevent="fetchWordFrequencies" class="frequencies-form">
+      <label for="userId">User Name:</label>
+      <input type="text" v-model="userId" placeholder="Enter your user name" required />
       <button type="submit" :disabled="isLoading">Get Frequencies</button>
     </form>
 
@@ -43,7 +43,7 @@ export default {
       userId: '',
       wordFrequencies: [],
       errorMessage: '',
-      isLoading: false
+      isLoading: false,
     };
   },
   methods: {
@@ -71,8 +71,8 @@ export default {
       } finally {
         this.isLoading = false;
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -83,11 +83,30 @@ export default {
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 5px;
+  background-color: #f9f9f9;
+  text-align: center;
 }
+
+.frequencies-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.frequencies-form label,
+.frequencies-form input,
+.frequencies-form button {
+  width: 100%;
+  max-width: 300px;
+  margin: 5px 0;
+}
+
 input[type="text"] {
-  display: block;
-  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
 }
+
 button {
   padding: 10px 20px;
   background-color: #007bff;
@@ -95,24 +114,52 @@ button {
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  width: 100%;
+  max-width: 300px;
 }
+
 button:hover {
   background-color: #0056b3;
 }
+
 .result, .error {
   margin-top: 20px;
 }
+
 .loading-indicator {
   font-size: 1.2em;
   color: #007bff;
 }
+
 table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 20px;
 }
+
 th, td {
   border: 1px solid #ccc;
   padding: 8px;
   text-align: left;
+}
+
+@media (max-width: 600px) {
+  .frequencies-container {
+    padding: 15px;
+  }
+
+  .frequencies-form label,
+  .frequencies-form input,
+  .frequencies-form button {
+    max-width: 100%;
+  }
+
+  table {
+    font-size: 14px;
+  }
+
+  th, td {
+    padding: 6px;
+  }
 }
 </style>

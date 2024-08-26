@@ -6,6 +6,7 @@ import PhraseFrequencies from './components/PhraseFrequencies.vue';
 import HomePage from './components/HomePage.vue';
 import ComparisonPage from './components/ComparisonPage.vue';
 import LiveAudio from './components/LiveAudio.vue';
+import AboutPage from './components/AboutPage.vue';
 
 const routes = [
   {
@@ -42,6 +43,11 @@ const routes = [
     path: '/transcribe_live',
     name: 'LiveAudio',
     component: LiveAudio,
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: AboutPage,
   }
 ];
 

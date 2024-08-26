@@ -9,6 +9,8 @@ import speech_recognition as sr
 from pydub import AudioSegment
 import io
 import spacy
+import pytz
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -93,7 +95,6 @@ def transcribe():
 
     # Detecting language
     try:
-        # language = detect(original_text)
         detection=translator.detect(original_text)
         language=detection.lang
         if language != 'en':
@@ -116,13 +117,10 @@ def transcribe():
 
     return jsonify({'status': 'success', 'translated_text': translated_text})
 
-
 def update_word_frequencies(user_id, text):
-    # Removing punctuation and lowercase
     words = re.findall(r'\b\w+\b', text.lower())
     word_counts = Counter(words)
     
-    # Updating/inserting word frequencies
     for word, count in word_counts.items():
         existing = WordFrequency.query.filter_by(user_id=user_id, word=word).first()
         if existing:
@@ -138,7 +136,7 @@ def update_phrases(user_id, text):
     
     for np in doc.noun_chunks:
         phrase = np.text.lower().strip()
-        if len(phrase.split()) <= 6:  # Limiting to 3-word phrases
+        if len(phrase.split()) <= 6:  # Limiting to 6-word phrases
             phrases.append(phrase)
     
     phrase_counts = Counter(phrases)
@@ -163,7 +161,6 @@ def transcribe_live():
         return jsonify({'status': 'error', 'message': 'No user_id provided'}), 400
 
     try:
-        # Converting file to WAV if it's not in WAV format
         if audio_file.mimetype != 'audio/wav':
             audio = AudioSegment.from_file(audio_file)
             wav_io = io.BytesIO()
@@ -176,14 +173,11 @@ def transcribe_live():
         with audio_data as source:
             audio = recognizer.record(source)
         
-        # Trying to recognize speech
         original_text = recognizer.recognize_google(audio)
         
-        # Checking if transcription is empty
         if not original_text.strip():
             return jsonify({'status': 'error', 'message': 'No speech detected in the audio file'}), 400
         
-        # Detecting language
         detection = translator.detect(original_text)
         detected_language = detection.lang
         
@@ -192,7 +186,6 @@ def transcribe_live():
         else:
             translated_text = original_text
         
-        # Save transcription data to the database
         transcription = Transcription(user_id=user_id, original_text=original_text, translated_text=translated_text, language=detected_language)
         db.session.add(transcription)
         db.session.commit()
@@ -208,20 +201,27 @@ def transcribe_live():
         return jsonify({'status': 'error', 'message': f'Could not request results from Google Speech Recognition service; {e}'}), 500
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error processing audio file: {e}'}), 500
-    
-    
+
 @app.route('/history/<user_id>', methods=['GET'])
 def get_history(user_id):
     transcriptions = Transcription.query.filter_by(user_id=user_id).all()
     if not transcriptions:
         return jsonify({'error': 'No data found for this user.'}), 404
-    return jsonify([{
-        'id': t.id,
-        'original_text': t.original_text,
-        'translated_text': t.translated_text,
-        'language': t.language,
-        'timestamp': t.timestamp
-    } for t in transcriptions])
+    
+    ist = pytz.timezone('Asia/Kolkata')  # Define IST timezone
+    result = []
+    for t in transcriptions:
+        # Convert timestamp to IST
+        timestamp_ist = t.timestamp.astimezone(ist).strftime('%Y-%m-%d %H:%M:%S')
+        result.append({
+            'id': t.id,
+            'original_text': t.original_text,
+            'translated_text': t.translated_text,
+            'language': t.language,
+            'timestamp': timestamp_ist
+        })
+    
+    return jsonify(result)
 
 @app.route('/frequencies/<user_id>', methods=['GET'])
 def get_word_frequencies(user_id):
@@ -246,14 +246,19 @@ def get_phrase_frequencies(user_id):
 @app.route('/comparison/<user_id>', methods=['GET'])
 def compare_word_frequencies(user_id):
     user_frequencies = WordFrequency.query.filter_by(user_id=user_id).all()
-    all_frequencies = WordFrequency.query.all()
-    
     if not user_frequencies:
         return jsonify({'error': 'No data found for this user.'}), 404
 
+    # Creating a dictionary for the user's word frequencies
     user_word_counts = {f.word: f.frequency for f in user_frequencies}
-    all_word_counts = Counter(f.word for f in all_frequencies)
-    
+
+    # Getting all word frequencies across all users and aggregate them
+    all_word_counts = Counter()
+    all_user_frequencies = WordFrequency.query.all()
+    for entry in all_user_frequencies:
+        all_word_counts[entry.word] += entry.frequency
+
+    # Preparing the comparison results
     comparison = {}
     for word, count in user_word_counts.items():
         comparison[word] = {

@@ -1,16 +1,16 @@
 <template>
   <div class="history-container">
-    <h2>View Your Transcription History</h2>
-    <form @submit.prevent="fetchHistory">
-      <label for="userId">Enter Your Name:</label>
+    <h2>Your Transcription History</h2>
+    <form @submit.prevent="fetchHistory" class="history-form">
+      <label for="userId">Enter Your Name (Case Sensitive):</label>
       <input type="text" v-model="userId" required />
       <button type="submit">View History</button>
     </form>
 
     <div v-if="history.length">
       <h3>Transcription History:</h3>
-      <ul>
-        <li v-for="(transcription, index) in history" :key="index">
+      <ul class="history-list">
+        <li v-for="(transcription, index) in history" :key="index" class="history-item">
           {{ transcription.timestamp }}: {{ transcription.translated_text }}
         </li>
       </ul>
@@ -33,38 +33,77 @@ export default {
   },
   methods: {
     async fetchHistory() {
-    this.historyFetched = false;
-    try {
+      this.historyFetched = false;
+      try {
         const response = await fetch(`http://127.0.0.1:5000/history/${this.userId}`);
         if (response.ok) {
-            this.history = await response.json();
+          this.history = await response.json();
         } else {
-            this.history = [];
+          this.history = [];
         }
         this.historyFetched = true;
-    } catch (error) {
+      } catch (error) {
         console.error('Error fetching history:', error);
         this.history = [];
         this.historyFetched = true;
-    }
-}
-  }
+      }
+    },
+  },
 };
 </script>
-
 
 <style scoped>
 .history-container {
   max-width: 800px;
   margin: auto;
   padding: 20px;
+  text-align: center;
 }
+
+.history-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.history-form label,
+.history-form input,
+.history-form button {
+  width: 100%;
+  max-width: 300px;
+  margin: 5px 0;
+}
+
 ul {
   list-style: none;
   padding: 0;
 }
-li {
+
+.history-list {
+  padding: 0;
+  margin: 0;
+}
+
+.history-item {
   border-bottom: 1px solid #ccc;
   padding: 10px 0;
+  text-align: left;
+}
+
+@media (max-width: 600px) {
+  .history-container {
+    padding: 15px;
+  }
+
+  .history-form label,
+  .history-form input,
+  .history-form button {
+    max-width: 100%;
+  }
+
+  .history-item {
+    font-size: 14px;
+    padding: 8px 0;
+  }
 }
 </style>
