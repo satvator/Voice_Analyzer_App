@@ -2,26 +2,17 @@
     "version": 2,
     "builds": [
       {
-        "src": "frontend/package.json",
-        "use": "@vercel/static-build",
-        "config": {
-          "distDir": "frontend/final" 
-        }
-      },
-      {
         "src": "backend/app.py",
         "use": "@vercel/python"
       }
     ],
     "routes": [
       {
-        "src": "/api/(.*)",
-        "dest": "/backend/app.py"
-      },
-      {
         "src": "/(.*)",
-        "dest": "/frontend/final/$1"
+        "dest": "/backend/app.py"
       }
-    ]
+    ],
+    "ignoreCommand": "npm run lint",
+    "outputDirectory": "public"
   }
   
