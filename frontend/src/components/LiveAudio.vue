@@ -110,7 +110,7 @@ export default {
 
       this.isLoading = true; // Show loading indicator
 
-      fetch('https://voice-backend-bjyq.onrender.com/transcribe_live', {
+      fetch('https://voice-backend-2ou7.onrender.com/transcribe_live', {
         method: 'POST',
         body: formData,
       })
@@ -142,7 +142,7 @@ export default {
         });
     },
     fetchSimilarUsers() {
-      fetch(`https://voice-backend-bjyq.onrender.com/compare_similarity/${this.userId}`)
+      fetch(`https://voice-backend-2ou7.onrender.com/compare_similarity/${this.userId}`)
         .then(response => {
           if (!response.ok) {
             return response.json().then(data => {

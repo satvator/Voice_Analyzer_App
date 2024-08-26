@@ -35,7 +35,7 @@ export default {
     async fetchHistory() {
       this.historyFetched = false;
       try {
-        const response = await fetch(`https://voice-backend-bjyq.onrender.com/history/${this.userId}`);
+        const response = await fetch(`https://voice-backend-2ou7.onrender.com/history/${this.userId}`);
         if (response.ok) {
           this.history = await response.json();
         } else {
