@@ -2,32 +2,28 @@
     "version": 2,
     "builds": [
       {
-        "src": "app.py",
-        "use": "@vercel/python",
-        "config": {
-          "maxLambdaSize": "50mb"
-        }
+        "src": "frontend/package.json",
+        "use": "@vercel/static-build"
       },
       {
-        "src": "vite.config.js",
-        "use": "@vercel/static-build",
-        "config": {
-          "distDir": "dist"
-        }
+        "src": "backend/app.py",
+        "use": "@vercel/python"
       }
     ],
     "routes": [
       {
         "src": "/api/(.*)",
-        "dest": "app.py"
+        "dest": "/backend/app.py"
       },
       {
         "src": "/(.*)",
-        "dest": "/index.html"
+        "dest": "/frontend/dist/$1"
       }
     ],
-    "env": {
-      "DATABASE_URI": "sqlite:///voice_analyzer.db"
+    "functions": {
+      "backend/app.py": {
+        "maxDuration": 10
+      }
     }
   }
   
