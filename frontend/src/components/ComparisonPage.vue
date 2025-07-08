@@ -58,7 +58,7 @@ export default {
       this.isLoading = true;
 
       try {
-        const response = await fetch(`https://voice-backend-2ou7.onrender.com/comparison/${this.userId}`);
+        const response = await fetch(`https://voice-backend-lp5e.onrender.com/comparison/${this.userId}`);
         const data = await response.json();
         if (response.ok) {
           this.comparisonData = data;
