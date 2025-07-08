@@ -142,7 +142,7 @@ export default {
         });
     },
     fetchSimilarUsers() {
-      fetch(`https://voice-backend-2ou7.onrender.com/compare_similarity/${this.userId}`)
+      fetch(`https://voice-backend-lp5e.onrender.com/compare_similarity/${this.userId}`)
         .then(response => {
           if (!response.ok) {
             return response.json().then(data => {
