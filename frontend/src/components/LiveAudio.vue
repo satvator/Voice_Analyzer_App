@@ -110,7 +110,7 @@ export default {
 
       this.isLoading = true; // Show loading indicator
 
-      fetch('https://voice-backend-2ou7.onrender.com/transcribe_live', {
+      fetch('https://voice-backend-lp5e.onrender.com/transcribe_live', {
         method: 'POST',
         body: formData,
       })
